@@ -16,10 +16,25 @@
           window.apis.pacEnginePromise.then(
             (engine) => {
 
-              engine.addEventListener('INFORM', () => {
-                chrome.browserAction.setBadgeText({
-                  text: 'BLK',
-                });
+              engine.addEventListener('DIRECT', ({ url }) => {
+
+                chrome.tabs.query({
+                    url: `${url}*`,
+                  },
+                  Bexer.Utils.workOrDie((tabs) =>
+                    tabs.forEach((tab) => {
+
+                      chrome.browserAction.setBadgeText({
+                        tabId: tab.id,
+                        text: '⇅',
+                      });
+                      chrome.browserAction.setTitle({
+                        tabId: tab.id,
+                        title: 'Directly connected to this site.',
+                      });
+                    }),
+                  ),
+                );
               });
               engine.setDataAsync(data);
             },

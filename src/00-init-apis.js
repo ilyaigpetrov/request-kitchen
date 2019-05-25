@@ -21,6 +21,6 @@
   chrome.browserAction.setBadgeText({
       text: 'λ',
     },
-    Bexer.Utils.getOrDie(),
+    Bexer.Utils.workOrDie(),
   );
 }

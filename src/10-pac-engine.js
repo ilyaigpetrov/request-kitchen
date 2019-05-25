@@ -2,7 +2,8 @@
 
 window.apis.pacEnginePromise = new Promise((resolveEngine) => {
 
-  const blackhole = '-*-kill..all..ads-*-.invalid';
+  const BLACKHOLE = '"PROXY -*-kill..all..ads-*-.invalid"';
+  const TOR_PROXIES = '"SOCKS5 localhost:9150; SOCKS5 localhost:9050"';
 
   const pacEngine = {
 
@@ -29,10 +30,9 @@ function FindProxyForURL(url, host) {
     suffix = hostname;
     return host.endsWith(hostname);
   })) {
-    //return 'PROXY ${blackhole}';
-    throw new ErrorWhichIsEvent('INFORM', { host, url, suffix });
+    return ${TOR_PROXIES};
   }
-  return 'DIRECT';
+  throw new ErrorWhichIsEvent('DIRECT', { host, url });
 }
           `,
         }
@@ -43,7 +43,7 @@ function FindProxyForURL(url, host) {
             value: config,
             scope: 'regular',
           },
-          Bexer.Utils.getOrDie(resolve),
+          Bexer.Utils.workOrDie(resolve),
         )
       );
       cb && cb();
@@ -72,7 +72,7 @@ function FindProxyForURL(url, host) {
     },
 
   };
-  chrome.proxy.settings.clear({}, Bexer.Utils.getOrDie(() => resolveEngine(pacEngine)));
+  chrome.proxy.settings.clear({}, Bexer.Utils.workOrDie(() => resolveEngine(pacEngine)));
 
 });
 
