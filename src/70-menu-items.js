@@ -8,12 +8,22 @@
 
       googleTranslate: {
         title: 'Install RosBlockInformer',
-        clickHandler: (tab) => {
+        clickHandler: async (tab) => {
 
-          alert('Installing...');
-          fetch(chrome.extension.getUrl('./domains-export.txt'))
+          const data = await fetch(chrome.extension.getURL('./domains-export.txt'))
             .then((res) => res.text())
-            .then((text.split(/(?:\r*\n+)+/)));
+            .then((text) => (text.trim().split(/\s+/)));
+          window.apis.pacEnginePromise.then(
+            (engine) => {
+
+              engine.addEventListener('INFORM', () => {
+                chrome.browserAction.setBadgeText({
+                  text: 'BLK',
+                });
+              });
+              engine.setDataAsync(data);
+            },
+          );
         },
         order: 0,
       },

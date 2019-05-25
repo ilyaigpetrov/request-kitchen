@@ -10,7 +10,8 @@
     },
     // Ignore errors related to ads blocking.
     ifToNotifyAboutAsync: (errType, errEvent) =>
-      errEvent.error !== 'net::ERR_PROXY_CONNECTION_FAILED',
+      errEvent.error !== 'net::ERR_PROXY_CONNECTION_FAILED'
+      && !(errEvent.details || '').includes('EVENT_'),
   });
 
   console.log('Extension started.');
