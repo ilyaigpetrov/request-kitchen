@@ -7,12 +7,18 @@
     getItemsAsObject: () => ({
 
       googleTranslate: {
-        title: 'Через Google Translate',
-        getUrl: (blockedUrl) => (
-          'https://translate.google.com/translate?hl=&sl=en&tl=ru&anno=2&sandbox=1&u=' + blockedUrl),
+        title: 'Install RosBlockInformer',
+        clickHandler: (tab) => {
+
+          alert('Installing...');
+          fetch(chrome.extension.getUrl('./domains-export.txt'))
+            .then((res) => res.text())
+            .then((text.split(/(?:\r*\n+)+/)));
+        },
         order: 0,
       },
 
+      /*
       hostTracker: {
         title: 'Из кэша Google',
         getUrl: (blockedUrl) => 'http://webcache.googleusercontent.com/search?q=cache:' + blockedUrl,
@@ -21,7 +27,7 @@
 
       archiveOrg: {
         title: 'Из архива archive.org',
-        getUrl: (blockedUrl) => 'https://web.archive.org/web/*/' + blockedUrl,
+        getUrl: (blockedUrl) => 'https://web.archive.org/web/*//*' + blockedUrl,
         order: 2,
       },
 
@@ -42,6 +48,7 @@
         getUrl: (blockedUrl) => 'https://git.io/ac-wiki',
         order: 99,
       },
+      */
 
     }),
 

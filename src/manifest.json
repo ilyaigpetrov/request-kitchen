@@ -9,7 +9,8 @@
 
   "permissions": [
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "proxy"
   ],
 
   "background": {
@@ -17,6 +18,7 @@
     "scripts": [
       "./vendor/bexer/index.js",
       "./00-init-apis.js",
+      "./10-pac-scripts.js",
       "./70-menu-items.js",
       "./75-context-menus.js"
     ]

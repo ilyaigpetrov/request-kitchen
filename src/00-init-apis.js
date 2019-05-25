@@ -1,21 +1,25 @@
 'use strict';
 
-window.apis = {};
+{
+  window.apis = {};
 
-window.Bexer.installErrorReporter({
-  submissionOpts: {
-    sendReportsToEmail: 'ilyaigpetrov+request-kitchen@gmail.com',
-    sendReportsInLanguages: ['en', 'ru'],
-  }
-});
+  window.Bexer.installErrorReporter({
+    submissionOpts: {
+      sendReportsToEmail: 'ilyaigpetrov+request-kitchen@gmail.com',
+      sendReportsInLanguages: ['en', 'ru'],
+    },
+    // Ignore errors related to ads blocking.
+    ifToNotifyAboutAsync: (errType, errEvent) =>
+      errEvent.error !== 'net::ERR_PROXY_CONNECTION_FAILED',
+  });
 
+  console.log('Extension started.');
 
-console.log('Extension started.');
+  chrome.browserAction.disable(); // Enable context menu on left click too.
 
-chrome.browserAction.disable(); // Enable context menu on left click too.
-chrome.browserAction.setBadgeBackgroundColor({
-    color: 'ffffff',
-  },
-  Bexer.Utils.getOrDie(),
-);
-
+  chrome.browserAction.setBadgeText({
+      text: 'λ',
+    },
+    Bexer.Utils.getOrDie(),
+  );
+}

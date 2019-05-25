@@ -6,13 +6,13 @@
 
   let seqId = 0;
 
-  const createMenuLinkEntry = (title, tab2url) => {
+  const createMenuLinkEntry = (item) => {
 
     const id = (++seqId).toString();
 
     chrome.contextMenus.create({
       id: id,
-      title: title,
+      title: item.title,
       contexts: ['browser_action'],
     }, chromified((err) => {
 
@@ -25,21 +25,18 @@
     chrome.contextMenus.onClicked.addListener((info, tab) => {
 
       if(info.menuItemId === id) {
-        Promise.resolve( tab2url( tab ) )
-          .then( (url) => chrome.tabs.create({url: url}) );
+        if (item.tab2url) {
+          Promise.resolve( item.tab2url( tab ) )
+            .then( (url) => chrome.tabs.create({url: url}) );
+          return;
+        }
+        item.clickHandler(tab);
       }
 
     });
 
   };
 
-  window.apis.menus.getItemsAsArray().forEach((item) => {
-
-    createMenuLinkEntry(
-      item.title,
-      (tab) => item.getUrl(tab.url)
-    );
-
-  });
+  window.apis.menus.getItemsAsArray().forEach(createMenuLinkEntry);
 
 }
