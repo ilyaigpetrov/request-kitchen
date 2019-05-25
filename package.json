@@ -1,0 +1,19 @@
+{
+  "name": "example-new",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "clean": "shx rm -rf ./dist && mkdir ./dist",
+    "copy-src": "shx cp -r ./src/* ./dist/.",
+    "bundle": "rollup -c",
+    "build": "npm run clean && npm run copy-src && npm run bundle",
+    "start": "npm run build"
+  },
+  "devDependencies": {
+    "rollup": "^1.12.3",
+    "shx": "^0.3.2"
+  },
+  "dependencies": {
+    "@bexer/components": "0.0.5"
+  }
+}
