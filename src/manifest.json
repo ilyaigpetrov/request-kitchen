@@ -2,21 +2,27 @@
 
   "manifest_version": 2,
 
-  "name": "Request Kitchen",
-  "description": "Harness all the requests!",
+  "name": "λ Request Kitchen",
+  "description": "Tame all the requests!",
   "version": "0.0.0.1",
   "author": "ilyaigpetrov@gmail.com",
 
   "permissions": [
-    "notifications"
+    "notifications",
+    "contextMenus"
   ],
 
   "background": {
     "persistent": false,
     "scripts": [
       "./vendor/bexer/index.js",
-      "./index.js"
+      "./00-init-apis.js",
+      "./70-menu-items.js",
+      "./75-context-menus.js"
     ]
+  },
+
+  "browser_action": {
   }
 
 }
