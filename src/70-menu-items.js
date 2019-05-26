@@ -40,6 +40,7 @@
           title: 'Install RosBlockInformer',
           clickHandler: async ({tab, setMenuProps}) => {
 
+            console.log('Installing proxies');
             const dataPromise = fetch(chrome.extension.getURL('./domains-export.txt'))
               .then((res) => res.text())
               .then((text) => (text.trim().split(/\s+/)));
@@ -48,7 +49,8 @@
               permissions: ['tabs'],
             }, Bexer.Utils.workOrDie(async (ifTabsGranted) => {
 
-                const engine = await window.apis.proxyEnginePromise;
+                console.log('Permission?', ifTabsGranted);
+                const engine = window.apis.proxyEngine;
                 if (ifTabsGranted) {
                   engine.addEventListener('DIRECT', ({ url }) =>
 
@@ -72,7 +74,7 @@
                     ),
                   );
                 }
-                engine.setDataAsync(await dataPromise);
+                engine.installAsync(await dataPromise);
               }),
             );
 

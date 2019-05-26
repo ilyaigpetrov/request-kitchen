@@ -11,7 +11,8 @@
     "notifications",
     "contextMenus",
     "proxy",
-    "storage"
+    "storage",
+    "<all_urls>"
   ],
   "optional_permissions": [
     "tabs"
