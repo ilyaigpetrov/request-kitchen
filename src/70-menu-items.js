@@ -48,7 +48,7 @@
               permissions: ['tabs'],
             }, Bexer.Utils.workOrDie(async (ifTabsGranted) => {
 
-                const engine = await window.apis.pacEnginePromise;
+                const engine = await window.apis.proxyEnginePromise;
                 if (ifTabsGranted) {
                   engine.addEventListener('DIRECT', ({ url }) =>
 

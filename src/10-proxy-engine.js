@@ -1,11 +1,11 @@
 'use strict';
 
-window.apis.pacEnginePromise = new Promise((resolveEngine) => {
+window.apis.proxyEnginePromise = new Promise((resolveEngine) => {
 
   const BLACKHOLE = '"PROXY -*-kill..all..ads-*-.invalid"';
   const TOR_PROXIES = '"SOCKS5 localhost:9150; SOCKS5 localhost:9050"';
 
-  const pacEngine = {
+  const proxyEngine = {
 
     async installAsync(data = [], cb) {
 
@@ -72,8 +72,8 @@ function FindProxyForURL(url, host) {
     },
 
   };
-  // chrome.proxy.settings.clear({}, Bexer.Utils.workOrDie(() => resolveEngine(pacEngine)));
-  resolveEngine(pacEngine);
+  // chrome.proxy.settings.clear({}, Bexer.Utils.workOrDie(() => resolveEngine(proxyEngine)));
+  resolveEngine(proxyEngine);
 
 });
 
