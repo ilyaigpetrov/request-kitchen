@@ -1,34 +1,73 @@
 'use strict';
 
 {
+  console.log('Extension started.');
+
+  const fakeStorage = {
+    ifEnabled: true,
+    ifMuted: false,
+  };
+
   window.apis = {
     platform: {
       ifFirefox: navigator.userAgent.toLowerCase().includes('firefox'),
     },
+    persistedState: {
+      getAsync() {
+
+        return Promise.resolve(fakeStorage);
+      },
+      updateAsync(newOpts) {
+        Object.assign(fakeStorage, newOpts);
+        return this.getAsync();
+      }
+    },
+    runtimeState: {
+      uninstallReporterSingleton: () => {},
+    },
+    async setMutedTo(ifMuted = false) {
+      const ifCurrentlyMuted = (await this.persistedState.getAsync()).ifMuted;
+      if(ifMuted === ifCurrentlyMuted) {
+        return;
+      }
+      await this.persistedState.updateAsync({ ifMuted });
+      installReporterSingleton({ ifMuted });
+    },
   };
 
-  window.Bexer.installErrorReporter({
-    submissionOpts: {
-      sendReportsToEmail: 'ilyaigpetrov+request-kitchen@gmail.com',
-      sendReportsInLanguages: ['en', 'ru'],
-    },
-    // Ignore errors related to ads blocking.
-    ifToNotifyAboutAsync: (errType, errEvent) =>
-      errEvent.error !== 'net::ERR_PROXY_CONNECTION_FAILED'
-      && !(errEvent.details || '').includes('EVENT_'),
-  });
+  const installReporterSingleton = async ({ ifMuted } = {}) => {
 
-  console.log('Extension started.');
+    if (ifMuted === undefined) {
+      ifMuted = (await window.apis.persistedState.getAsync()).ifMuted;
+    }
+    window.apis.runtimeState.uninstallReporterSingleton();
+
+    console.log('Installing error reporter, ifMuted=', ifMuted);
+    const onlyTheseErrorTypes = ifMuted
+      ? [Bexer.ErrorTypes.EXT_ERROR]
+      : undefined;
+    console.log('only', onlyTheseErrorTypes);
+    window.apis.runtimeState.uninstallReporterSingleton =
+      window.Bexer.installErrorReporter({
+        submissionOpts: {
+          sendReportsToEmail: 'ilyaigpetrov+request-kitchen@gmail.com',
+          sendReportsInLanguages: ['en', 'ru'],
+          onlyTheseErrorTypes,
+        },
+        // Ignore errors related to ads blocking.
+        ifToNotifyAboutAsync: (errType, errEvent) =>
+          errEvent.error !== 'net::ERR_PROXY_CONNECTION_FAILED'
+          && !(errEvent.details || '').includes('EVENT_'),
+      });
+
+  };
+
+  installReporterSingleton();
 
   if (window.apis.platform.ifFirefox) {
     chrome.browserAction.setBadgeTextColor({
       color: '#ffffff',
     });
-    /*
-    chrome.browserAction.onClicked.addListener(Bexer.Utils.workOrDie(() =>
-      alert('Click me with a left button!'),
-    ));
-    */
     chrome.browserAction.setPopup({
         popup: chrome.extension.getURL('./pages/popup/index.html'),
       },
@@ -36,7 +75,11 @@
     );
   } else {
     // Chromium-like.
-    chrome.browserAction.disable(); // Enable context menu on left click too.
+    // Disabling to enable context menu on both left and right buttons.
+    chrome.browserAction.onClicked.addListener(Bexer.Utils.workOrDie(
+      () => chrome.browserAction.disable(),
+    ));
+    chrome.browserAction.disable();
   }
   chrome.browserAction.setBadgeBackgroundColor({
       color: '#4285f4',

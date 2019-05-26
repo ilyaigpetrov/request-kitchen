@@ -59,7 +59,7 @@ function FindProxyForURL(url, host) {
 
       return window.Bexer.addGlobalHandler((errType, errEvent) => {
         if (
-          errType === 'pac-error'
+          errType === Bexer.ErrorTypes.PAC_ERROR
           && errEvent.error === 'net::ERR_PAC_SCRIPT_FAILED'
         ) {
           const [_, line, uncaught, ...rest] = errEvent.details.split(':');
@@ -72,7 +72,8 @@ function FindProxyForURL(url, host) {
     },
 
   };
-  chrome.proxy.settings.clear({}, Bexer.Utils.workOrDie(() => resolveEngine(pacEngine)));
+  // chrome.proxy.settings.clear({}, Bexer.Utils.workOrDie(() => resolveEngine(pacEngine)));
+  resolveEngine(pacEngine);
 
 });
 

@@ -24,7 +24,7 @@
         order: 1,
         clickHandler: ({ info, setMenuProps }) => {
 
-          console.log(info);
+          window.apis.setMutedTo(info.checked);
         },
         menuOpts: {
           type: 'checkbox',
@@ -44,6 +44,7 @@
 
               engine.addEventListener('DIRECT', ({ url }) => {
 
+                console.log('DIRECT', url);
                 chrome.tabs.query({
                     url: `${url}*`,
                   },
