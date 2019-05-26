@@ -2,7 +2,7 @@
 
   "manifest_version": 2,
 
-  "name": "λ Request Kitchen",
+  "name": "Request Kitchen",
   "description": "Tame all the requests!",
   "version": "0.0.0.1",
   "author": "ilyaigpetrov@gmail.com",
@@ -34,6 +34,10 @@
     "default_icon": {
       "512": "./icons/icon-512.png"
     }
+  },
+
+  "options_ui": {
+    "page": "./pages/options/index.html"
   }
 
 }

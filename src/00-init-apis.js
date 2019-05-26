@@ -24,9 +24,16 @@
     chrome.browserAction.setBadgeTextColor({
       color: '#ffffff',
     });
+    /*
     chrome.browserAction.onClicked.addListener(Bexer.Utils.workOrDie(() =>
       alert('Click me with a left button!'),
     ));
+    */
+    chrome.browserAction.setPopup({
+        popup: chrome.extension.getURL('./pages/popup/index.html'),
+      },
+      Bexer.Utils.workOrDie(),
+    );
   } else {
     // Chromium-like.
     chrome.browserAction.disable(); // Enable context menu on left click too.
