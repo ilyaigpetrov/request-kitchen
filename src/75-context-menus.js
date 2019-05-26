@@ -45,6 +45,6 @@
 
   };
 
-  window.apis.menus.getItemsAsArray().forEach(createMenuLinkEntry);
+  window.apis.menusPromise.then((menus) => menus.getItemsAsArray().forEach(createMenuLinkEntry));
 
 }

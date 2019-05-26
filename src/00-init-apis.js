@@ -3,7 +3,7 @@
 {
   console.log('Extension started.');
 
-  const fakeStorage = {
+  const storageDefaults = {
     ifEnabled: true,
     ifMuted: false,
   };
@@ -15,11 +15,19 @@
     persistedState: {
       getAsync() {
 
-        return Promise.resolve(fakeStorage);
+        return new Promise((resolve) => chrome.storage.local.get(
+          null,
+          Bexer.Utils.workOrDie((obj) =>
+            resolve({...storageDefaults, ...obj}),
+          ),
+        ));
       },
       updateAsync(newOpts) {
-        Object.assign(fakeStorage, newOpts);
-        return this.getAsync();
+        return new Promise((resolve) =>
+          chrome.storage.local.set(
+            newOpts,
+            Bexer.Utils.workOrDie(resolve),
+        ));
       }
     },
     runtimeState: {
