@@ -19,8 +19,8 @@
   chrome.browserAction.disable(); // Enable context menu on left click too.
 
   chrome.browserAction.setBadgeText({
-      text: 'λ',
+      text: '❓',
     },
-    Bexer.Utils.workOrDie(),
+    Bexer.Utils.workOrDie,
   );
 }
