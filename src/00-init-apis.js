@@ -77,7 +77,10 @@
     // Chromium-like.
     // Disabling to enable context menu on both left and right buttons.
     chrome.browserAction.onClicked.addListener(Bexer.Utils.workOrDie(
-      () => chrome.browserAction.disable(),
+      () => {
+        chrome.browserAction.disable();
+        alert('Click one more time, please.');
+      }
     ));
     chrome.browserAction.disable();
   }

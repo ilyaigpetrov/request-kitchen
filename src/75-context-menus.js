@@ -19,7 +19,7 @@
     }, chromified((err) => {
 
       if(err) {
-        console.warn('Context menu error ignored:', err);
+        console.log('Context menu error ignored:', err);
       }
 
     }));

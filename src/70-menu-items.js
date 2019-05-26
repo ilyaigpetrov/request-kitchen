@@ -36,36 +36,42 @@
         title: 'Install RosBlockInformer',
         clickHandler: async ({tab, setMenuProps}) => {
 
-          const data = await fetch(chrome.extension.getURL('./domains-export.txt'))
+          const dataPromise = fetch(chrome.extension.getURL('./domains-export.txt'))
             .then((res) => res.text())
             .then((text) => (text.trim().split(/\s+/)));
-          window.apis.pacEnginePromise.then(
-            (engine) => {
 
-              engine.addEventListener('DIRECT', ({ url }) => {
+          chrome.permissions.request({
+            permissions: ['tabs'],
+          }, Bexer.Utils.workOrDie(async (ifTabsGranted) => {
 
-                console.log('DIRECT', url);
-                chrome.tabs.query({
-                    url: `${url}*`,
-                  },
-                  Bexer.Utils.workOrDie((tabs) =>
-                    tabs.forEach((tab) => {
+              const engine = await window.apis.pacEnginePromise;
+              if (ifTabsGranted) {
+                engine.addEventListener('DIRECT', ({ url }) =>
 
-                      chrome.browserAction.setBadgeText({
-                        tabId: tab.id,
-                        text: '⇅',
-                      });
-                      chrome.browserAction.setTitle({
-                        tabId: tab.id,
-                        title: 'Directly connected to this site.',
-                      });
-                    }),
+                  chrome.tabs.query({
+                      url: `${url}*`,
+                    },
+                    Bexer.Utils.workOrDie((tabs) =>
+
+                      tabs.forEach((tab) => {
+
+                        chrome.browserAction.setBadgeText({
+                          tabId: tab.id,
+                          text: '⇅',
+                        });
+                        chrome.browserAction.setTitle({
+                          tabId: tab.id,
+                          title: 'Directly connected to this site.',
+                        });
+                      }),
+                    ),
                   ),
                 );
-              });
-              engine.setDataAsync(data);
-            },
+              }
+              engine.setDataAsync(await dataPromise);
+            }),
           );
+
         },
         order: 2,
       },

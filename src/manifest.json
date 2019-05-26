@@ -11,6 +11,9 @@
     "notifications",
     "contextMenus",
     "proxy",
+    "storage"
+  ],
+  "optional_permissions": [
     "tabs"
   ],
 
