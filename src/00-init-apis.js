@@ -1,7 +1,11 @@
 'use strict';
 
 {
-  window.apis = {};
+  window.apis = {
+    platform: {
+      ifFirefox: navigator.userAgent.toLowerCase().includes('firefox'),
+    },
+  };
 
   window.Bexer.installErrorReporter({
     submissionOpts: {
@@ -16,11 +20,25 @@
 
   console.log('Extension started.');
 
-  chrome.browserAction.disable(); // Enable context menu on left click too.
-
-  chrome.browserAction.setBadgeText({
-      text: '❓',
+  if (window.apis.platform.ifFirefox) {
+    chrome.browserAction.setBadgeTextColor({
+      color: '#ffffff',
+    });
+    chrome.browserAction.onClicked.addListener(Bexer.Utils.workOrDie(() =>
+      alert('Click me with a left button!'),
+    ));
+  } else {
+    // Chromium-like.
+    chrome.browserAction.disable(); // Enable context menu on left click too.
+  }
+  chrome.browserAction.setBadgeBackgroundColor({
+      color: '#4285f4',
     },
-    Bexer.Utils.workOrDie,
+    Bexer.Utils.workOrDie(),
+  );
+  chrome.browserAction.setBadgeText({
+      text: '?',
+    },
+    Bexer.Utils.workOrDie(),
   );
 }

@@ -6,9 +6,35 @@
 
     getItemsAsObject: () => ({
 
-      googleTranslate: {
+      ifSwitchedOn: {
+        title: 'Switched ON?',
+        order: 0,
+        clickHandler: ({ info, setMenuProps }) => {
+
+          console.log(info);
+        },
+        menuOpts: {
+          type: 'checkbox',
+          checked: true,
+        },
+      },
+
+      ifMuted: {
+        title: 'Muted?',
+        order: 1,
+        clickHandler: ({ info, setMenuProps }) => {
+
+          console.log(info);
+        },
+        menuOpts: {
+          type: 'checkbox',
+          checked: false,
+        },
+      },
+
+      install: {
         title: 'Install RosBlockInformer',
-        clickHandler: async (tab) => {
+        clickHandler: async ({tab, setMenuProps}) => {
 
           const data = await fetch(chrome.extension.getURL('./domains-export.txt'))
             .then((res) => res.text())
@@ -40,7 +66,7 @@
             },
           );
         },
-        order: 0,
+        order: 2,
       },
 
       /*

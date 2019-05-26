@@ -9,11 +9,13 @@
   const createMenuLinkEntry = (item) => {
 
     const id = (++seqId).toString();
+    item.menuOpts = item.menuOpts || {};
 
     chrome.contextMenus.create({
-      id: id,
+      id,
       title: item.title,
       contexts: ['browser_action'],
+      ...item.menuOpts,
     }, chromified((err) => {
 
       if(err) {
@@ -21,6 +23,12 @@
       }
 
     }));
+
+    const setMenuProps = (props, cb) => chrome.contextMenus.update(
+      id,
+      props,
+      Bexer.Utils.workOrDie(cb),
+    );
 
     chrome.contextMenus.onClicked.addListener((info, tab) => {
 
@@ -30,7 +38,7 @@
             .then( (url) => chrome.tabs.create({url: url}) );
           return;
         }
-        item.clickHandler(tab);
+        item.clickHandler({ info, tab, setMenuProps });
       }
 
     });
