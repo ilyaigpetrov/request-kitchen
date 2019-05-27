@@ -2,7 +2,8 @@
 
 {
   // Port 9 is discarded, see https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers#Well-known_ports
-  const blackholeHostname = '-*-kill..all..ads-*-.invalid';
+  // const blackholeHostname = '-*-kill..all..ads-*-.invalid';
+  const blackholeHostname = 'localhost';
   const blackholePort = 9;
 
   let dispatchEvent;
@@ -19,7 +20,7 @@
       return host.endsWith(hostname);
     })) {
       console.log('RETURNING TOR PROXY FOR', host);
-      return TOR_PROXIES;
+      return BLACKHOLE;
     }
     dispatchEvent('DIRECT', requestDetails);
   };
