@@ -2,6 +2,8 @@
 
 {
   // Port 9 is discarded, see https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers#Well-known_ports
+  //const blackholeHostname = '-*-kill..all..ads-*-.invalid';
+  //const blackholeHostname = 'google.com';
   const blackholeHostname = 'localhost';
   const blackholePort = 9;
 
@@ -9,15 +11,79 @@
   let __TOR_PROXIES__;
   let __BLACKHOLE__;
 
+  const webRequestEventPrefix = 'WEBREQUEST_';
+  const addWebRequestEventListener = (eventCamel, handler) => {
+
+    chrome.webRequest[eventCamel].addListener(
+      handler,
+      {urls: ['<all_urls>']}
+    );
+    return () => chrome.webRequest[eventCamel].removeListener(handler);
+  };
+
+  const addProxyEventListener = (typeUpper, handler) => {
+
+    if (!typeUpper.startsWith('PROXY')) {
+      return;
+    }
+    switch (typeUpper) {
+      case 'PROXY':
+        // TODO: check response ip with ips of proxies.
+        return addWebRequestEventListener('onResponseStarted', handler);
+      case 'PROXY_ERROR':
+        // TODO: filter out non-proxy errors.
+        return addWebRequestEventListener('onErrorOccurred', handler);
+      default:
+        throw new TypeError(`Unknown proxy event type "${typeUpper}"!`)
+    }
+  }
+
+  const addBlockEventListener = (handler) => {
+
+    addProxyEventListener('PROXY_ERROR', (requestDetails) => {
+
+      if (
+        requestDetails.error === 'net::ERR_PROXY_CONNECTION_FAILED'
+        && !requestDetails.ip // A GUESS: if error happened after successfull connection then ip may be set.
+      ) {
+        return handler(requestDetails);
+      }
+    });
+  };
+
+  const tryAddingWebRequestListeners = (typeUpper, handler) => {
+
+    const ifWebRequest = typeUpper.startsWith(webRequestEventPrefix);
+    if (!ifWebRequest) {
+      return;
+    }
+    if (!chrome.webRequest) {
+      throw new TypeError('No chrome.webRequest API detecetd! Check your permissions.');
+    }
+    const wrEventName = typeUpper.replace(webRequestEventPrefix, '');
+    if (wrEventName === 'BLOCK') {
+      return addBlockEventListener(handler);
+    }
+    const ifProxy = wrEventName.startsWith('PROXY');
+    if (ifProxy) {
+      return addProxyEventListener(typeUpper, handler);
+    }
+    return addWebRequestEventListener(typeUpper, handler);
+    
+  };
+
   const proxyChooser = (memory, requestDetails) => {
 
     const host = requestDetails.host || new URL(requestDetails.url).hostname;
     console.log('PROXY CHOOSER FOR', host);
     let suffix;
-    if (memory.some((hostname) => {
-      suffix = hostname;
-      return host.endsWith(hostname);
-    })) {
+    if (
+      memory.some((hostname) => {
+
+        suffix = hostname;
+        return host.endsWith(hostname);
+      })
+    ) {
       console.log('RETURNING TOR PROXY FOR', host);
       return __BLACKHOLE__;
     }
@@ -65,6 +131,10 @@
 
       addEventListener(typeUpper, handler) {
 
+        const remover = tryAddingWebRequestListeners(typeUpper, handler);
+        if (remover) {
+          return remover;
+        }
         if (!eventTypeUpperToHandlers[typeUpper]) {
           eventTypeUpperToHandlers[typeUpper] = [handler];
         } else {
@@ -143,6 +213,10 @@ function FindProxyForURL(url, host) {
 
       addEventListener(typeUpper, handler) {
 
+        const remover = tryAddingWebRequestListeners(typeUpper, handler);
+        if (remover) {
+          return remover;
+        }
         return window.Bexer.addGlobalHandler((errType, errEvent) => {
           if (
             errType === Bexer.ErrorTypes.PAC_ERROR

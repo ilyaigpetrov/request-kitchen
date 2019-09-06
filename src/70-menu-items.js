@@ -46,12 +46,14 @@
               .then((text) => (text.trim().split(/\s+/)));
 
             chrome.permissions.request({
-              permissions: ['tabs'],
+              permissions: ['tabs', 'webRequest'],
             }, Bexer.Utils.workOrDie(async (ifTabsGranted) => {
 
                 console.log('Permission?', ifTabsGranted);
                 const engine = window.apis.proxyEngine;
                 if (ifTabsGranted) {
+
+                  // DIRECT
                   engine.addEventListener('DIRECT', ({ url }) =>
 
                     chrome.tabs.query({
@@ -73,6 +75,28 @@
                       ),
                     ),
                   );
+                  // PROXY
+                  engine.addEventListener('WEBREQUEST_BLOCK', ({ url }) => {
+
+                    chrome.tabs.query({
+                        url: `${url}*`,
+                      },
+                      Bexer.Utils.workOrDie((tabs) =>
+
+                        tabs.forEach((tab) => {
+
+                          chrome.browserAction.setBadgeText({
+                            tabId: tab.id,
+                            text: '⛔',
+                          });
+                          chrome.browserAction.setTitle({
+                            tabId: tab.id,
+                            title: 'Blocked',
+                          });
+                        }),
+                      ),
+                    );
+                  });
                 }
                 engine.installAsync(await dataPromise);
               }),
