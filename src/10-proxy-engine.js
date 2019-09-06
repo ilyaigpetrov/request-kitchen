@@ -2,13 +2,12 @@
 
 {
   // Port 9 is discarded, see https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers#Well-known_ports
-  // const blackholeHostname = '-*-kill..all..ads-*-.invalid';
   const blackholeHostname = 'localhost';
   const blackholePort = 9;
 
   let dispatchEvent;
-  let TOR_PROXIES;
-  let BLACKHOLE;
+  let __TOR_PROXIES__;
+  let __BLACKHOLE__;
 
   const proxyChooser = (memory, requestDetails) => {
 
@@ -20,18 +19,18 @@
       return host.endsWith(hostname);
     })) {
       console.log('RETURNING TOR PROXY FOR', host);
-      return BLACKHOLE;
+      return __BLACKHOLE__;
     }
     dispatchEvent('DIRECT', requestDetails);
   };
 
   if (chrome.proxy.onRequest) {
     // Firefox.
-    TOR_PROXIES = [
+    __TOR_PROXIES__ = [
       { type: 'socks', host: 'localhost', port: 9150 },
       { type: 'socks', host: 'localhost', port: 9050 },
     ];
-    BLACKHOLE = { type: 'proxy', host: blackholeHostname, port: blackholePort };
+    __BLACKHOLE__ = { type: 'proxy', host: blackholeHostname, port: blackholePort };
     const eventTypeUpperToHandlers = {};
     let memory = [];
     window.apis.proxyEngine = {
@@ -80,11 +79,11 @@
     };
   } else {
     // Chromium.
-    TOR_PROXIES = '"SOCKS5 localhost:9150; SOCKS5 localhost:9050"';
-    BLACKHOLE = `"PROXY ${blackholeHostname}:${blackholePort}"`;
+    __TOR_PROXIES__ = '"SOCKS5 localhost:9150; SOCKS5 localhost:9050"';
+    __BLACKHOLE__ = `"PROXY ${blackholeHostname}:${blackholePort}"`;
     const templateContext = {
-      TOR_PROXIES,
-      BLACKHOLE,
+      __TOR_PROXIES__,
+      __BLACKHOLE__,
     };
     window.apis.proxyEngine = {
 
@@ -94,6 +93,7 @@
           mode: 'pac_script',
           pacScript: {
             data: `
+
 class ErrorWhichIsEvent extends Error {
   constructor(typeUpper, obj) {
     const msg = JSON.stringify(obj);
@@ -119,7 +119,8 @@ function FindProxyForURL(url, host) {
     )
   })(memory, requestDetails);
 }
-            `,
+
+            `.trim(),
           }
         };
         await new Promise((resolve) =>
