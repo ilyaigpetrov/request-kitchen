@@ -5,13 +5,14 @@
   const blackholeHostname = 'localhost';
   const blackholePort = 9;
 
-  let dispatchEvent;
+  let dispatchEvent, mayDispatchEvent;
   let __TOR_PROXIES__;
   let __BLACKHOLE__;
 
   const webRequestEventPrefix = 'WEBREQUEST_';
   const addWebRequestEventListener = (eventCamel, handler) => {
 
+    handler = Bexer.Utils.timeouted(handler);
     chrome.webRequest[eventCamel].addListener(
       handler,
       {urls: ['<all_urls>']},
@@ -19,14 +20,100 @@
     return () => chrome.webRequest[eventCamel].removeListener(handler);
   };
 
-  const addProxyEventListener = (typeUpper, handler) => {
+  const applyProxyFilters = (proxyFilters, handler, requestDetails, proxyObjects) => {
 
+    console.log(requestDetails.ip, proxyFilters, proxyObjects, requestDetails);
+    if (proxyObjects.some(
+      (proxyObj) => proxyObj.host && proxyObj.host === requestDetails.hostname,
+    )) {
+      // URL is located at some proxy, e.g. localhost.
+      // Don't show that proxy is active.
+      return;
+    }
+    const filteredProxyObjects = proxyObjects.filter(
+      (proxyObj) => proxyFilters.some((filter) => {
+
+        let result = true;
+        if (filter.hosts && proxyObj.host) {
+          result = result && filter.hosts.includes(proxyObj.host);
+        }
+        if (filter.ips && proxyObj.ip) {
+          result = result && filter.ips.includes(proxyObj.ip);
+        }
+        if (filter.types && proxyObj.type) {
+          result = result && filter.types.includes(proxyObj.type);
+        }
+        return result;
+      }),
+    );
+    if (filteredProxyObjects.length) {
+      handler(requestDetails, filteredProxyObjects);
+    }
+  };
+  const addProxyEventListener = async (typeUpper, handler, proxyFilters) => {
+
+    console.log('ADD PR', typeUpper, proxyFilters);
     if (!typeUpper.startsWith('PROXY')) {
       return;
     }
     switch (typeUpper) {
       case 'PROXY':
-        return addWebRequestEventListener('onResponseStarted', handler);
+        const proxyIpToHosts = {
+          '127.0.0.1': ['localhost'],
+          '::1': ['localhost'],
+        };
+        if (proxyFilters) {
+          proxyFilters
+            .filter((filter) => filter.hosts)
+            .map((filter) => {
+
+              const hostsPromises = filter.hosts.map(async (host) => {
+
+                let ipsPromises;
+                if (host === 'localhost') {
+                  ipsPromises = ['127.0.0.1', '::1'];
+                } else {
+                  const types = [1, 28];
+                  ipsPromises = types.map((type) =>
+                    fetch(`https://dns.google.com/resolve?type=${type}&name=${host}`)
+                      .then((res) => res.json())
+                      .then((res) => res.data) // TODO: handle errors.
+                  );
+                }
+                return Promise.all(ipsPromises)
+                  .then((ips) => ips.forEach(
+                    (ip) => {
+
+                      if (!proxyIpToHosts[ip]) {
+                        proxyIpToHosts = [host];
+                      } else {
+                        proxyIpToHosts[ip].push(host);
+                      }
+                    }
+                  ));
+              });
+              return Promise.all(hostsPromises);
+            })
+        }
+        return addWebRequestEventListener('onResponseStarted', (requestDetails) => {
+
+          const { ip } = requestDetails;
+          if (!ip) {
+            return;
+          }
+          let proxyObjects = [];
+          const hosts = proxyIpToHosts[ip];
+          if (hosts) {
+            proxyObjects = hosts.map((host) => ({ host, ip }));
+          } else {
+            const ifIpInFilters = proxyFilters.some((f) => f.ips && f.ips.includes(ip));
+            if (ifIpInFilters) {
+              proxyObjects = [{ ip }];
+            }
+          }
+          handler(requestDetails, proxyObjects);
+          return;
+        });
       case 'PROXY_ERROR':
         // TODO: filter out non-proxy errors.
         return addWebRequestEventListener('onErrorOccurred', handler);
@@ -47,8 +134,9 @@
     });
   };
 
-  const tryAddingWebRequestListeners = (typeUpper, handler) => {
+  const tryAddingWebRequestListeners = (typeUpper, handler, ...args) => {
 
+    console.log('TRY WR', typeUpper)
     const ifWebRequest = typeUpper.startsWith(webRequestEventPrefix);
     if (!ifWebRequest) {
       return;
@@ -58,43 +146,45 @@
     }
     const wrEventName = typeUpper.replace(webRequestEventPrefix, '');
     if (wrEventName === 'BLOCK') {
-      return addBlockEventListener(handler);
+      return addBlockEventListener(handler, ...args);
     }
     const ifProxy = wrEventName.startsWith('PROXY');
     if (ifProxy) {
-      return addProxyEventListener(typeUpper, handler);
+      return addProxyEventListener(wrEventName, handler, ...args);
     }
-    return addWebRequestEventListener(typeUpper, handler);
+    return addWebRequestEventListener(typeUpper, handler, ...args);
     
   };
 
-  const tryAddingSpecialListeners = (typeUpper, handler, ...args) => {
+  const tryAddingSpecialListeners = (typeUpper, handler, proxyFilters) => {
 
     if (typeUpper === 'PROXY') {
-      if (chrome.proxy.onRequest) {
-        return /* Fallback to non-special listeners. */; // TODO: how to handle args?
-      } else {
-        typeUpper = webRequestEventPrefix + 'PROXY';
+      if (proxyFilters) {
+        const oldHandler = handler;
+        handler = (requestDetails, proxyObjects) =>
+          applyProxyFilters(proxyFilters, oldHandler, requestDetails, proxyObjects);
       }
+      if (chrome.proxy.onRequest) {
+        return [null, handler];
+      }
+      typeUpper = webRequestEventPrefix + 'PROXY';
     }
-    return tryAddingWebRequestListeners(typeUpper, handler, ...args);
+    return [tryAddingWebRequestListeners(typeUpper, handler, proxyFilters), handler];
   }
 
   const proxyChooser = (memory, requestDetails) => {
 
-    const host = requestDetails.host || new URL(requestDetails.url).hostname;
-    console.log('PROXY CHOOSER FOR', host);
+    const hostname = requestDetails.hostname = requestDetails.host || new URL(requestDetails.url).hostname;
+    console.log('PROXY CHOOSER FOR', hostname);
     let suffix;
     if (
-      memory.some((hostname) => {
-
-        suffix = hostname;
-        return host.endsWith(hostname);
-      })
+      memory.some((hostnameSuffix) =>
+        hostname.endsWith(hostnameSuffix),
+      )
     ) {
-      console.log('RETURNING TOR PROXY FOR', host);
-      mayDispatchEvent('PROXY', __TOR_PROXIES__);
-      return __BLACKHOLE__;
+      console.log('RETURNING TOR PROXY FOR', hostname);
+      mayDispatchEvent('PROXY', requestDetails, __TOR_PROXIES__);
+      return __TOR_PROXIES__;
     }
     dispatchEvent('DIRECT', requestDetails);
   };
@@ -102,8 +192,8 @@
   if (chrome.proxy.onRequest) {
     // Firefox.
     __TOR_PROXIES__ = [
-      { type: 'socks', host: 'localhost', port: 9150 },
       { type: 'socks', host: 'localhost', port: 9050 },
+      { type: 'socks', host: 'localhost', port: 9150 },
     ];
     __BLACKHOLE__ = { type: 'proxy', host: blackholeHostname, port: blackholePort };
     const eventTypeUpperToHandlers = {};
@@ -119,9 +209,9 @@
         if (memoryInit) {
           memory = memoryInit;
         }
-        dispatchEvent = (typeUpper, plainObj, ...args) =>
+        dispatchEvent = (typeUpper, ...plainObjects) =>
           (eventTypeUpperToHandlers[typeUpper] || [])
-            .forEach((h) => h(plainObj, ...args));
+            .forEach((h) => h(...plainObjects));
         mayDispatchEvent = dispatchEvent;
 
         console.log('ADDING LISTENER TO BEFORE REQUEST');
@@ -141,18 +231,18 @@
 
       addEventListener(typeUpper, handler, ...args) {
 
-        const specialRemover = tryAddingSpecialListeners(typeUpper, handler, ...args);
+        const [specialRemover, spHandler] = tryAddingSpecialListeners(typeUpper, handler, ...args);
         if (specialRemover) {
           return specialRemover;
         }
         if (!eventTypeUpperToHandlers[typeUpper]) {
-          eventTypeUpperToHandlers[typeUpper] = [handler];
+          eventTypeUpperToHandlers[typeUpper] = [spHandler];
         } else {
-          eventTypeUpperToHandlers[typeUpper].push(handler);
+          eventTypeUpperToHandlers[typeUpper].push(spHandler);
         }
         const removeListener = () => {
           eventTypeUpperToHandlers[typeUpper] = eventTypeUpperToHandlers[typeUpper]
-            .filter((h) => h !== handler);
+            .filter((h) => h !== spHandler);
         }
         return removeListener;
       },
@@ -175,16 +265,16 @@
             data: `
 
 class ErrorWhichIsEvent extends Error {
-  constructor(typeUpper, obj) {
-    const msg = JSON.stringify(obj);
+  constructor(typeUpper, ...plainObjects) {
+    const msg = JSON.stringify(plainObjects);
     super(msg);
     this.name = ${'`EVENT_${typeUpper}`'};
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-const dispatchEvent = (typeUpper, plainObj) => {
-  throw new ErrorWhichIsEvent(typeUpper, plainObj);
+const dispatchEvent = (typeUpper, ...plainObjects) => {
+  throw new ErrorWhichIsEvent(typeUpper, ...plainObjects);
 };
 const mayDispatchEvent = () => {};
 
@@ -224,7 +314,7 @@ function FindProxyForURL(url, host) {
 
       addEventListener(typeUpper, handler, ...args) {
 
-        const specialRemover = tryAddingSpecialListeners(typeUpper, handler, ...args);
+        const [specialRemover, spHandler] = tryAddingSpecialListeners(typeUpper, handler, ...args);
         if (specialRemover) {
           return specialRemover;
         }
@@ -237,7 +327,7 @@ function FindProxyForURL(url, host) {
             if (!uncaught.includes(`EVENT_${typeUpper}`)) {
               return;
             }
-            handler(JSON.parse(rest.join(':')));
+            spHandler(...JSON.parse(rest.join(':')));
           }
         });
       },

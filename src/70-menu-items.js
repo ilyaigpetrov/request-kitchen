@@ -47,11 +47,11 @@
 
             chrome.permissions.request({
               permissions: ['tabs', 'webRequest'],
-            }, Bexer.Utils.workOrDie(async (ifTabsGranted) => {
+            }, Bexer.Utils.workOrDie(async (ifGranted) => {
 
-                console.log('Permission?', ifTabsGranted);
+                console.log('Permission?', ifGranted);
                 const engine = window.apis.proxyEngine;
-                if (ifTabsGranted) {
+                if (ifGranted) {
 
                   // DIRECT
                   engine.addEventListener('DIRECT', ({ url }) =>
@@ -75,7 +75,6 @@
                       ),
                     ),
                   );
-                  // PROXY
                   engine.addEventListener('WEBREQUEST_BLOCK', ({ url }) => {
 
                     chrome.tabs.query({
@@ -97,6 +96,29 @@
                       ),
                     );
                   });
+                  engine.addEventListener('PROXY', ({ tabId, url }) => {
+
+                      console.log('PROXY', url);
+                      if (tabId < 0) {
+                        return;
+                      }
+                      chrome.tabs.get(
+                        tabId,
+                        Bexer.Utils.workOrDie((tab) => {
+
+                          chrome.browserAction.setBadgeText({
+                            tabId: tab.id,
+                            text: '𝗣',
+                          });
+                          chrome.browserAction.setTitle({
+                            tabId: tab.id,
+                            title: 'Proxied',
+                          });
+                        }),
+                      );
+                    },
+                    [{ hosts: ['localhost'] }],
+                  );
                 }
                 engine.installAsync(await dataPromise);
               }),
